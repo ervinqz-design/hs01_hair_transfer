@@ -636,7 +636,33 @@ class HS01Composite:
 # 4. 提示词编号映射
 # ---------------------------------------------------------------------------
 
+class HS01SaveInput:
+    CATEGORY = "hs01"
+    FUNCTION = "save"
+    OUTPUT_NODE = True
+    RETURN_TYPES = ("IMAGE",)
+    RETURN_NAMES = ("image",)
+    DESCRIPTION = "把 Step1 的 Qwen 原始图自动写成 input/qwen_raw.png，供 Step2 的 LoadImage 读取。"
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {
+            "image": ("IMAGE",),
+            "filename": ("STRING", {"default": "qwen_raw.png"}),
+        }}
+
+    def save(self, image, filename="qwen_raw.png"):
+        out = os.path.join(folder_paths.get_input_directory(), os.path.basename(filename or "qwen_raw.png"))
+        arr = (image[0].detach().cpu().numpy() * 255.0).clip(0, 255).astype("uint8")
+        if arr.shape[-1] == 4:
+            arr = arr[..., :3]
+        from PIL import Image as PILImage
+        PILImage.fromarray(arr).save(out)
+        return (image,)
+
+
 class HS01PromptMap:
+
 
     CATEGORY = "hs01"
     FUNCTION = "run"
@@ -662,6 +688,7 @@ class HS01PromptMap:
 
 NODE_CLASS_MAPPINGS = {
     "HS01FullCrop": HS01FullCrop,
+    "HS01SaveInput": HS01SaveInput,
     "HS01PhotoHairRef": HS01PhotoHairRef,
     "HS01HairMaskToWaist": HS01HairMaskToWaist,
     "HS01PlaceHairRef": HS01PlaceHairRef,
@@ -670,6 +697,7 @@ NODE_CLASS_MAPPINGS = {
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
     "HS01FullCrop": "hs02 整张手动裁切（→LoRA 尺寸，不二次裁头）",
+    "HS01SaveInput": "hs02 自动写 input/qwen_raw.png",
     "HS01PhotoHairRef": "hs02 发型预览（贴到原图裁切）",
     "HS01HairMaskToWaist": "hs02 头发遮罩映射到腰部",
     "HS01PlaceHairRef": "hs02 发型白模放回腰部（旧）",
