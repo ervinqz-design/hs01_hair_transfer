@@ -636,7 +636,49 @@ class HS01Composite:
 # 4. 提示词编号映射
 # ---------------------------------------------------------------------------
 
+class HS01MaskComponents:
+    CATEGORY = "hs01"
+    FUNCTION = "run"
+    RETURN_TYPES = ("MASK",)
+    RETURN_NAMES = ("mask",)
+    DESCRIPTION = "只保留最大的变化区，以及它附近的小连通块；去掉身体/背景上的孤立块。"
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {
+            "mask": ("MASK",),
+            "margin_percent": ("FLOAT", {"default": 12.0, "min": 0.0, "max": 50.0, "step": 1.0}),
+            "min_area_percent": ("FLOAT", {"default": 0.02, "min": 0.0, "max": 5.0, "step": 0.01}),
+        }}
+
+    def run(self, mask, margin_percent=12.0, min_area_percent=0.02):
+        m = mask[0] if mask.ndim == 3 else mask
+        a = (m.detach().cpu().numpy() > 0.5).astype("uint8")
+        if cv2 is None or a.max() == 0:
+            return (m.unsqueeze(0).float(),)
+        n, lab, stats, cent = cv2.connectedComponentsWithStats(a, 8)
+        if n <= 1:
+            return (m.unsqueeze(0).float(),)
+        areas = stats[1:, cv2.CC_STAT_AREA]
+        main = 1 + int(areas.argmax())
+        x0, y0, w0, h0 = (int(stats[main, cv2.CC_STAT_LEFT]), int(stats[main, cv2.CC_STAT_TOP]),
+                          int(stats[main, cv2.CC_STAT_WIDTH]), int(stats[main, cv2.CC_STAT_HEIGHT]))
+        mx, my = w0 * margin_percent / 100.0, h0 * margin_percent / 100.0
+        min_area = max(1.0, a.size * min_area_percent / 100.0)
+        out = np.zeros_like(a)
+        for i in range(1, n):
+            if i == main:
+                out[lab == i] = 1
+                continue
+            cx, cy = cent[i]
+            if (x0 - mx <= cx <= x0 + w0 + mx and y0 - my <= cy <= y0 + h0 + my
+                    and stats[i, cv2.CC_STAT_AREA] >= min_area):
+                out[lab == i] = 1
+        return (torch.from_numpy(out.astype("float32")).unsqueeze(0),)
+
+
 class HS01SaveInput:
+
     CATEGORY = "hs01"
     FUNCTION = "save"
     OUTPUT_NODE = True
@@ -688,6 +730,7 @@ class HS01PromptMap:
 
 NODE_CLASS_MAPPINGS = {
     "HS01FullCrop": HS01FullCrop,
+    "HS01MaskComponents": HS01MaskComponents,
     "HS01SaveInput": HS01SaveInput,
     "HS01PhotoHairRef": HS01PhotoHairRef,
     "HS01HairMaskToWaist": HS01HairMaskToWaist,
@@ -697,6 +740,7 @@ NODE_CLASS_MAPPINGS = {
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
     "HS01FullCrop": "hs02 整张手动裁切（→LoRA 尺寸，不二次裁头）",
+    "HS01MaskComponents": "hs02 只保留头发主变化区",
     "HS01SaveInput": "hs02 自动写 input/qwen_raw.png",
     "HS01PhotoHairRef": "hs02 发型预览（贴到原图裁切）",
     "HS01HairMaskToWaist": "hs02 头发遮罩映射到腰部",
