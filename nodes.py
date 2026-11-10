@@ -215,7 +215,7 @@ def _lora_bucket(aspect: float) -> tuple[int, int]:
     return min(buckets.values(), key=lambda wh: abs(math.log((wh[0] / wh[1]) / max(1e-6, aspect))))
 
 
-class HS01OneCrop:
+class HS01FullCrop:
     CATEGORY = "hs01"
     FUNCTION = "run"
     RETURN_TYPES = ("IMAGE", "MASK", "IMAGE", "IMAGE", "IMAGE", "MASK", "MASK", "STRING", "STRING", "INT", "INT")
@@ -657,7 +657,7 @@ class HS01PromptMap:
 
 
 NODE_CLASS_MAPPINGS = {
-    "HS01OneCrop": HS01OneCrop,
+    "HS01FullCrop": HS01FullCrop,
     "HS01PhotoHairRef": HS01PhotoHairRef,
     "HS01HairMaskToWaist": HS01HairMaskToWaist,
     "HS01PlaceHairRef": HS01PlaceHairRef,
@@ -665,7 +665,7 @@ NODE_CLASS_MAPPINGS = {
     "HS01PromptMap": HS01PromptMap,
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "HS01OneCrop": "hs02 一次手动裁切（白模裁切→LoRA 尺寸）",
+    "HS01FullCrop": "hs02 整张手动裁切（→LoRA 尺寸，不二次裁头）",
     "HS01PhotoHairRef": "hs02 发型预览（贴到原图裁切）",
     "HS01HairMaskToWaist": "hs02 头发遮罩映射到腰部",
     "HS01PlaceHairRef": "hs02 发型白模放回腰部（旧）",
