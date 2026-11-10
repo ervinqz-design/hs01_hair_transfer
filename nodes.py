@@ -18,6 +18,8 @@ import os
 import math
 from pathlib import Path
 
+import folder_paths
+
 import numpy as np
 import torch
 from PIL import Image, ImageFilter
