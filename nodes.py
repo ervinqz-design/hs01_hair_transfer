@@ -655,7 +655,7 @@ class HS01SaveIf:
 
     def save(self, image=None, enabled=True, filename_prefix="hs01_hair_transfer/tmp"):
         if not enabled or image is None:
-            return (None,)
+            return (torch.zeros((1, 1, 1, 3)),)
         out_dir = folder_paths.get_output_directory()
         full_folder, filename, counter, subfolder, _ = folder_paths.get_save_image_path(
             filename_prefix, out_dir, image.shape[2], image.shape[1])
