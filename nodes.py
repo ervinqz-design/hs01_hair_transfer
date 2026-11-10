@@ -636,40 +636,6 @@ class HS01Composite:
 # 4. 提示词编号映射
 # ---------------------------------------------------------------------------
 
-class HS01SaveIf:
-    CATEGORY = "hs01"
-    FUNCTION = "save"
-    OUTPUT_NODE = True
-    RETURN_TYPES = ("IMAGE",)
-    RETURN_NAMES = ("image",)
-    DESCRIPTION = "开关打开时才保存，并把上游图像作为 lazy 输入；关闭时完全不执行上游。"
-
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {"required": {
-            "image": ("IMAGE", {"lazy": True, "tooltip": "只有 enabled=true 时才请求这张图"}),
-            "enabled": ("BOOLEAN", {"default": True, "tooltip": "true=保存，false=不保存且不执行上游"}),
-            "filename_prefix": ("STRING", {"default": "hs01_hair_transfer/tmp"}),
-        }}
-
-    def check_lazy_status(self, image=None, enabled=True, filename_prefix=""):
-        return ["image"] if enabled else []
-
-    def save(self, image=None, enabled=True, filename_prefix="hs01_hair_transfer/tmp"):
-        if not enabled or image is None:
-            return (torch.zeros((1, 1, 1, 3)),)
-        out_dir = folder_paths.get_output_directory()
-        full_folder, filename, counter, subfolder, _ = folder_paths.get_save_image_path(
-            filename_prefix, out_dir, image.shape[2], image.shape[1])
-        for i, frame in enumerate(image):
-            arr = (frame.detach().cpu().numpy() * 255.0).clip(0, 255).astype("uint8")
-            if arr.shape[-1] == 4:
-                arr = arr[..., :3]
-            from PIL import Image as PILImage
-            PILImage.fromarray(arr).save(os.path.join(full_folder, f"{filename}_{counter + i:05d}_.png"))
-        return (image,)
-
-
 class HS01PromptMap:
 
     CATEGORY = "hs01"
@@ -699,7 +665,6 @@ NODE_CLASS_MAPPINGS = {
     "HS01PhotoHairRef": HS01PhotoHairRef,
     "HS01HairMaskToWaist": HS01HairMaskToWaist,
     "HS01PlaceHairRef": HS01PlaceHairRef,
-    "HS01SaveIf": HS01SaveIf,
     "HS01Composite": HS01Composite,
     "HS01PromptMap": HS01PromptMap,
 }
@@ -708,7 +673,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "HS01PhotoHairRef": "hs02 发型预览（贴到原图裁切）",
     "HS01HairMaskToWaist": "hs02 头发遮罩映射到腰部",
     "HS01PlaceHairRef": "hs02 发型白模放回腰部（旧）",
-    "HS01SaveIf": "hs02 条件保存（开关关闭不跑上游）",
     "HS01Composite": "hs02 只把头发拼回原图",
     "HS01PromptMap": "hs02 提示词 图1/图2 映射",
 }
